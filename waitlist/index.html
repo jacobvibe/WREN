@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="WREN — See everything your wardrobe can do. Join the waitlist.">
+  <title>WREN</title>
+  <!-- Supabase JS (UMD — exposes window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0a0a0a;
+      --fg:      #ffffff;
+      --muted:   rgba(255,255,255,0.4);
+      --dim:     rgba(255,255,255,0.15);
+      --accent:  #c8f04d;
+      --surface: #111111;
+      --radius:  10px;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+                   'Helvetica Neue', Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 24px 64px;
+    }
+
+    /* ── Header ──────────────────────────────────────────── */
+    header {
+      width: 100%;
+      max-width: 480px;
+      padding: 32px 0 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--fg);
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── Main ────────────────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+
+    /* ── Calculator ──────────────────────────────────────── */
+    .calculator { display: flex; flex-direction: column; gap: 20px; }
+
+    .steppers {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stepper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--dim);
+      border-radius: var(--radius);
+      padding: 14px 4px 12px;
+      transition: border-color 0.2s;
+      min-width: 0; /* allow grid to compress */
+    }
+
+    .stepper:focus-within { border-color: rgba(200,240,77,0.5); }
+
+    .stepper-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-step {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+      padding: 4px 5px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .btn-step:hover  { color: var(--fg); }
+    .btn-step:active { color: var(--fg); background: rgba(255,255,255,0.06); }
+
+    .step-val {
+      font-size: clamp(28px, 7vw, 36px);
+      font-weight: 800;
+      line-height: 1;
+      min-width: 2ch;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .formula {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      height: 18px; /* prevent layout shift */
+    }
+
+    /* ── Result ──────────────────────────────────────────── */
+    .result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .result-pre {
+      font-size: 15px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .count-wrap {
+      line-height: 0.88;
+      letter-spacing: -0.04em;
+    }
+
+    #count {
+      font-size: clamp(80px, 21vw, 148px);
+      font-weight: 900;
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      display: inline-block;
+    }
+
+    .result-post {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 300;
+      color: rgba(255,255,255,0.65);
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Copy ────────────────────────────────────────────── */
+    .copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-left: 2px solid var(--accent);
+      padding-left: 20px;
+    }
+
+    .copy p {
+      font-size: clamp(17px, 4.5vw, 20px);
+      line-height: 1.55;
+      color: rgba(255,255,255,0.75);
+    }
+
+    .copy p + p { margin-top: 12px; }
+
+    .copy strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    /* ── Signup ──────────────────────────────────────────── */
+    .signup { display: flex; flex-direction: column; gap: 14px; }
+
+    #form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #form[hidden] { display: none; }
+
+    .email-input {
+      width: 100%;
+      padding: 15px 18px;
+      background: var(--surface);
+      border: 1px solid var(--dim);
+      border-radius: var(--radius);
+      color: var(--fg);
+      font-size: 16px; /* prevents iOS zoom */
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .email-input::placeholder { color: var(--muted); }
+    .email-input:focus { border-color: rgba(200,240,77,0.6); }
+
+    .btn-submit {
+      width: 100%;
+      padding: 15px 18px;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius);
+      color: var(--bg);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-submit:hover  { opacity: 0.9; }
+    .btn-submit:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* ── Success ─────────────────────────────────────────── */
+    #success {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px;
+      background: rgba(200,240,77,0.08);
+      border: 1px solid rgba(200,240,77,0.25);
+      border-radius: var(--radius);
+      color: var(--accent);
+      font-size: 17px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    #success[hidden] { display: none; }
+    #success.visible { opacity: 1; }
+
+    .checkmark {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      flex-shrink: 0;
+    }
+
+    .fine-print {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Divider ─────────────────────────────────────────── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: var(--dim);
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer {
+      width: 100%;
+      max-width: 480px;
+      margin-top: 48px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Count animation ─────────────────────────────────── */
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.04); }
+      100% { transform: scale(1); }
+    }
+    .count-pop { animation: pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="brand">Wren</span>
+    <span class="badge">Early access</span>
+  </header>
+
+  <main>
+
+    <!-- Calculator -->
+    <section class="calculator" aria-label="Wardrobe calculator">
+
+      <div class="steppers">
+
+        <div class="stepper" data-key="tops">
+          <div class="stepper-controls">
+            <button class="btn-step dec" type="button" aria-label="Decrease tops">−</button>
+            <span class="step-val" id="val-tops">12</span>
+            <button class="btn-step inc" type="button" aria-label="Increase tops">+</button>
+          </div>
+          <span class="step-label">Tops</span>
+        </div>
+
+        <div class="stepper" data-key="bottoms">
+          <div class="stepper-controls">
+            <button class="btn-step dec" type="button" aria-label="Decrease bottoms">−</button>
+            <span class="step-val" id="val-bottoms">10</span>
+            <button class="btn-step inc" type="button" aria-label="Increase bottoms">+</button>
+          </div>
+          <span class="step-label">Bottoms</span>
+        </div>
+
+        <div class="stepper" data-key="dresses">
+          <div class="stepper-controls">
+            <button class="btn-step dec" type="button" aria-label="Decrease dresses">−</button>
+            <span class="step-val" id="val-dresses">5</span>
+            <button class="btn-step inc" type="button" aria-label="Increase dresses">+</button>
+          </div>
+          <span class="step-label">Dresses</span>
+        </div>
+
+      </div>
+
+      <p class="formula" id="formula" aria-live="polite">12 tops × 10 bottoms + 5 dresses</p>
+
+    </section>
+
+    <!-- Result -->
+    <section class="result" aria-live="polite" aria-label="Outfit count">
+      <p class="result-pre">You already own</p>
+      <div class="count-wrap">
+        <span id="count">125</span>
+      </div>
+      <p class="result-post">outfits.</p>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Copy -->
+    <section class="copy">
+      <p>You've probably worn about <strong>12</strong> of them.</p>
+      <p>WREN shows you the rest — and fills the real gaps.</p>
+    </section>
+
+    <!-- Signup -->
+    <section class="signup">
+
+      <form id="form" novalidate>
+        <input
+          class="email-input"
+          id="email"
+          type="email"
+          placeholder="your@email.com"
+          autocomplete="email"
+          inputmode="email"
+          required
+          aria-label="Email address"
+        >
+        <button class="btn-submit" type="submit">Get early access</button>
+      </form>
+
+      <div id="success" hidden role="status">
+        <div class="checkmark" aria-hidden="true">✓</div>
+        You're on the list.
+      </div>
+
+      <p class="fine-print">Early access · No spam · Ever.</p>
+
+    </section>
+
+  </main>
+
+  <footer>© 2026 Wren</footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ── Supabase config (substituted at build time by waitlist/build.js) ──
+      const SUPABASE_URL      = '__SUPABASE_URL__';
+      const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+
+      const db = (typeof window.supabase !== 'undefined' && SUPABASE_URL !== '__SUPABASE_URL__')
+        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
+
+      // ── State ─────────────────────────────────────────────────
+      const state = { tops: 12, bottoms: 10, dresses: 5 };
+
+      const els = {
+        tops:    document.getElementById('val-tops'),
+        bottoms: document.getElementById('val-bottoms'),
+        dresses: document.getElementById('val-dresses'),
+        count:   document.getElementById('count'),
+        formula: document.getElementById('formula'),
+        form:    document.getElementById('form'),
+        success: document.getElementById('success'),
+        email:   document.getElementById('email'),
+        submit:  document.querySelector('.btn-submit'),
+      };
+
+      // ── Count-up animation ────────────────────────────────────
+      let animFrame = null;
+      let displayedCount = 125;
+
+      function animateTo(target) {
+        const start     = displayedCount;
+        const delta     = target - start;
+        const duration  = Math.min(Math.abs(delta) * 8 + 80, 600);
+        const startTime = performance.now();
+
+        if (animFrame) cancelAnimationFrame(animFrame);
+
+        function step(now) {
+          const elapsed  = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased    = 1 - Math.pow(1 - progress, 3);
+          const value    = Math.round(start + delta * eased);
+
+          els.count.textContent = value.toLocaleString();
+          displayedCount = value;
+
+          if (progress < 1) {
+            animFrame = requestAnimationFrame(step);
+          } else {
+            els.count.textContent = target.toLocaleString();
+            displayedCount = target;
+            els.count.classList.remove('count-pop');
+            void els.count.offsetWidth;
+            els.count.classList.add('count-pop');
+          }
+        }
+
+        animFrame = requestAnimationFrame(step);
+      }
+
+      // ── Recalculate ───────────────────────────────────────────
+      function recalculate() {
+        const { tops, bottoms, dresses } = state;
+        const total = tops * bottoms + dresses;
+        animateTo(total);
+        els.formula.textContent =
+          `${tops} top${tops !== 1 ? 's' : ''} × ${bottoms} bottom${bottoms !== 1 ? 's' : ''} + ${dresses} dress${dresses !== 1 ? 'es' : ''}`;
+      }
+
+      // ── Stepper logic ─────────────────────────────────────────
+      const MIN = 0;
+      const MAX = 99;
+
+      function setValue(key, newVal) {
+        newVal = Math.max(MIN, Math.min(MAX, newVal));
+        if (newVal === state[key]) return;
+        state[key] = newVal;
+        els[key].textContent = newVal;
+        recalculate();
+      }
+
+      function setupStepper(stepperEl) {
+        const key = stepperEl.dataset.key;
+        let interval = null;
+        let timeout  = null;
+
+        function startRepeat(dir) {
+          function step() { setValue(key, state[key] + dir); }
+          step();
+          timeout = setTimeout(() => { interval = setInterval(step, 80); }, 350);
+        }
+
+        function stopRepeat() {
+          clearTimeout(timeout);
+          clearInterval(interval);
+          timeout = interval = null;
+        }
+
+        stepperEl.querySelector('.dec').addEventListener('pointerdown', e => { e.preventDefault(); startRepeat(-1); });
+        stepperEl.querySelector('.inc').addEventListener('pointerdown', e => { e.preventDefault(); startRepeat(+1); });
+        document.addEventListener('pointerup',     stopRepeat);
+        document.addEventListener('pointercancel', stopRepeat);
+      }
+
+      document.querySelectorAll('.stepper').forEach(setupStepper);
+
+      Object.keys(state).forEach(key => {
+        const el = els[key];
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('role', 'spinbutton');
+        el.setAttribute('aria-valuemin', MIN);
+        el.setAttribute('aria-valuemax', MAX);
+        el.addEventListener('keydown', e => {
+          if (e.key === 'ArrowUp'   || e.key === '+') { e.preventDefault(); setValue(key, state[key] + 1); }
+          if (e.key === 'ArrowDown' || e.key === '-') { e.preventDefault(); setValue(key, state[key] - 1); }
+        });
+      });
+
+      // ── Form submit → Supabase insert ─────────────────────────
+      els.form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const email = els.email.value.trim();
+        if (!email || !email.includes('@')) { els.email.focus(); return; }
+
+        const combinations = state.tops * state.bottoms + state.dresses;
+
+        // Disable button to prevent double-submit
+        els.submit.disabled = true;
+        els.submit.textContent = 'Joining…';
+
+        if (db) {
+          const { error } = await db
+            .from('waitlist_signups')
+            .insert({
+              email,
+              tops_count:         state.tops,
+              bottoms_count:      state.bottoms,
+              dress_count:        state.dresses,
+              combinations_count: combinations,
+            })
+            .select('id')
+            .single();
+
+          if (error && error.code !== '23505') {
+            // 23505 = unique_violation (already signed up) — treat as success
+            console.error('Waitlist insert error:', error.message);
+            // Re-enable form so user can retry
+            els.submit.disabled = false;
+            els.submit.textContent = 'Get early access';
+            els.submit.style.background = '#ff6b6b';
+            els.submit.textContent = 'Try again';
+            return;
+          }
+        }
+
+        // Success — hide form, show confirmation
+        els.form.hidden = true;
+        els.success.hidden = false;
+        requestAnimationFrame(() => els.success.classList.add('visible'));
+      });
+
+    })();
+  </script>
+</body>
+</html>

@@ -31,7 +31,11 @@ yarn-error.*
 *.pem
 
 # local env files
+# SECURITY: .env contains live secrets (Supabase keys, Remove.bg key, GCP
+# service-account JSON). It must NEVER be committed. Only .env.example is tracked.
+.env
 .env*.local
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +43,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+.env.local

@@ -1,0 +1,59 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@media android {
+  :root {
+    --font-mono: monospace;
+    --font-rounded: normal;
+    --font-serif: serif;
+    --font-sans: normal;
+  }
+}
+
+@media ios {
+  :root {
+    --font-mono: ui-monospace;
+    --font-serif: ui-serif;
+    --font-sans: system-ui;
+    --font-rounded: ui-rounded;
+  }
+}
+
+/* Apple semantic colors */
+:root {
+  --sf-blue: light-dark(rgb(0 122 255), rgb(10 132 255));
+  --sf-green: light-dark(rgb(52 199 89), rgb(48 209 89));
+  --sf-red: light-dark(rgb(255 59 48), rgb(255 69 58));
+  --sf-gray: light-dark(rgb(142 142 147), rgb(142 142 147));
+  --sf-text: light-dark(rgb(0 0 0), rgb(255 255 255));
+  --sf-text-2: light-dark(rgb(60 60 67 / 0.6), rgb(235 235 245 / 0.6));
+  --sf-bg: light-dark(rgb(255 255 255), rgb(0 0 0));
+  --sf-bg-2: light-dark(rgb(242 242 247), rgb(28 28 30));
+}
+
+@media ios {
+  :root {
+    --sf-blue: platformColor(systemBlue);
+    --sf-green: platformColor(systemGreen);
+    --sf-red: platformColor(systemRed);
+    --sf-gray: platformColor(systemGray);
+    --sf-text: platformColor(label);
+    --sf-text-2: platformColor(secondaryLabel);
+    --sf-bg: platformColor(systemBackground);
+    --sf-bg-2: platformColor(secondarySystemBackground);
+  }
+}
+
+@layer theme {
+  @theme {
+    --color-sf-blue: var(--sf-blue);
+    --color-sf-green: var(--sf-green);
+    --color-sf-red: var(--sf-red);
+    --color-sf-gray: var(--sf-gray);
+    --color-sf-text: var(--sf-text);
+    --color-sf-text-2: var(--sf-text-2);
+    --color-sf-bg: var(--sf-bg);
+    --color-sf-bg-2: var(--sf-bg-2);
+  }
+}
